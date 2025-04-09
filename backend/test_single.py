@@ -9,7 +9,7 @@ import pandas as pd
 
 # ------------ USER INPUTS ------------
 
-pdf_path = "Nandini_Bhalla_22cs22002_IDD (1).pdf"  # Replace with your file
+pdf_path = "Nandini_Bhalla_22cs22002_IDD (1).pdf"  # Replace with your sample PDF file
 job_description = """
 We are seeking an AI Research Engineer to join our team to work on cutting-edge problems in machine learning, deep learning, and generative AI. 
 The ideal candidate will have experience in developing and optimizing models, conducting experiments, and publishing research. 
@@ -28,16 +28,21 @@ meeting_link = "https://meet.example.com/interview-link"
 with open(pdf_path, "rb") as f:
     file_bytes = f.read()
 
-# Extract structured info
+# Extract structured resume info using Gemini
 text, data = extract_resume_data(file_bytes)
 print("\n👤 Extracted:")
 print("Name:", data.get("name"))
 print("Email:", data.get("email"))
 
-# Score resume
+# Score the resume
 scoring = get_resume_score(text, job_description, required_skills)
-score = int(scoring.get("JD Match", "0%").replace("%", "").strip())
+try:
+    score = int(scoring.get("JD Match", "0%").replace("%", "").strip())
+except Exception as e:
+    print("Error parsing score:", e)
+    score = 0
 
+# Build the final result dictionary
 result = {
     "filename": os.path.basename(pdf_path),
     "name": data.get("name", "Not found"),
@@ -57,17 +62,18 @@ result = {
     "Qualified": "Yes" if score >= threshold else "No"
 }
 
-# Send interview invite if qualified
+# If the candidate qualifies and has a valid email, send the invitation email with a tailored message.
 if result["Qualified"] == "Yes" and "@" in result["email"]:
     try:
-        send_invite_email(result["name"], result["email"], meeting_link)
+        # Note the updated call: job_description is passed as the fourth parameter.
+        send_invite_email(result["name"], result["email"], meeting_link, job_description)
         print(f"✅ Email sent to: {result['email']}")
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
 else:
     print("❌ Candidate did not qualify. No email sent.")
 
-# Save to CSV
+# Save the result to a CSV file
 df = pd.DataFrame([result])
 os.makedirs("../results", exist_ok=True)
 df.to_csv("../results/final_results.csv", index=False)
